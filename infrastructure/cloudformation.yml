@@ -1,0 +1,36 @@
+Parameters:
+  SMSNumber:
+    Type: String
+    Description: Enter phone number which should receive texts
+Resources:
+  BackitUpSnsSMSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: 'backitup-sms-to-parties'
+      Subscription:
+        - Endpoint: !Ref SMSNumber
+          Protocol: sms
+  BackitUpSnsSMSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref BackitUpSnsSMSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Principal:
+            AWS: '*'
+          Action: SNS:Publish
+          Resource: !Ref BackitUpSnsSMSTopic
+
+  BackitupBucket:
+    Type: AWS::S3::Bucket
+    DependsOn: BackitUpSnsSMSTopicPolicy
+    Properties:
+      AccessControl: Private
+      BucketName: !Sub 'backitup-bucket-${AWS::Region}'
+      NotificationConfiguration:
+        TopicConfigurations:
+          - Event: s3:ObjectCreated:*
+            Topic: !Ref BackitUpSnsSMSTopic
